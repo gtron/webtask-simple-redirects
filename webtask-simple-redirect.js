@@ -17,7 +17,7 @@ var urlProcessor = ( {
      this.incCounter();
      this.saveData(this.key,this.urlData);
      this.sendToInflux();
-     this.endProcess();
+     this.endProcess(302, this.urlData.url );
 
    },
    
@@ -71,10 +71,14 @@ var urlProcessor = ( {
             return cb(error);
           }
           data = data || { counter: 1 };
-          dataK = data[k] ;
           
-          urlProcessor.processData(dataK);
-          
+          if ( k in data ) {
+            dataK = data[k] ;
+            
+            urlProcessor.processData(dataK);
+          }  else {
+            urlProcessor.sendError('Not found');
+          }
     });
   },
   
@@ -95,14 +99,19 @@ var urlProcessor = ( {
     });
   },
   
-  endProcess : function () {
-    this.res.writeHead(301, { 'Content-Type': 'text/html '});
+  sendError: function (message = 'Error!') {
+    this.res.writeHead(404, { 'Content-Type': 'text/html ' });
+    this.res.end('Error! ' + message );
+  },
+  
+  endProcess : function (code = 404, destination = '') {
+    this.res.writeHead(code, { 'Content-Type': 'text/html ', 'Location' : destination });
     this.res.end('This is the redirect!');
   },
    
    checkData : function() {
      if ( this.urlData === undefined )
-        throw( new SyntaxError('')); 
+        throw( new Error('')); 
    },
    
    incCounter : function () {
