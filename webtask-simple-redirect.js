@@ -1,4 +1,5 @@
 const http = require('http');
+const querystring = require('querystring');
 
 /**
 * @param ctx {WebtaskContext}
@@ -21,13 +22,41 @@ var urlProcessor = ( {
    },
    
    sendToInflux : function() {
-     http.get('http://www.google.com/index.html', (res) => {
-        console.log(`Got response: ${res.statusCode}`);
-        // consume response body
-        res.resume();
-      }).on('error', (e) => {
-        console.log(`Got error: ${e.message}`);
+     var secrets = this.context.secrets;
+     
+      postData =  secrets.influxDb+','+querystring.stringify({
+        "urlKey": this.key
+        }, 
+        ',') + " value=1";
+      
+      const options = {
+        hostname: secrets.influxHost,
+        port: secrets.influxPort,
+        path: '/write?db='+secrets.influxDb,
+        method: 'POST',
+        auth: secrets.influxUser+':'+secrets.influxPassword,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(postData)
+        }
+      };
+      
+      const req = http.request(options, (res) => {
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          console.log(`BODY: ${chunk}`);
+        });
+        res.on('end', () => {
+          console.log('No more data in response.');
+        });
       });
+      
+      req.on('error', (e) => {
+        console.error(`problem with request to Influx: ${e.message}`);
+      });
+      console.log("sending to Influx: " + postData );
+      req.write(postData);
+      req.end();
    },
    
    setContext: function(ctx, req, res){
@@ -64,16 +93,14 @@ var urlProcessor = ( {
           
           storage.set(data, function (error) {
               if (error) return cb(error);
-              console.log("written new Data", data);
+              // console.log("written new Data", data);
           });
     });
   },
   
   endProcess : function () {
     this.res.writeHead(301, { 'Content-Type': 'text/html '});
-  
     this.res.end('This is the redirect!');
-    
   },
    
    checkData : function() {
@@ -98,11 +125,5 @@ module.exports = function (ctx, req, res) {
   urlProcessor.setContext(ctx, req, res); 
   urlProcessor.processUrlKey(key);
   
-  /*
-  res.writeHead(404, { 'Content-Type': 'text/html '});
-  
-  res.end('URL Not found!');
-  */
 };
-
 
