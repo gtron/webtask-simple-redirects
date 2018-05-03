@@ -21,35 +21,13 @@ var urlProcessor = ( {
    },
    
    sendToInflux : function() {
-     var secrets = this.context.secrets;
-     
-      postData = secrets.influxDb + ',' + querystring.stringify({
-        "urlKey": this.key
-        }, 
-        ',') + " value=1";
-      
-      const options = {
-        hostname: secrets.influxHost,
-        port: secrets.influxPort,
-        path: '/write',
-        method: 'POST',
-        auth: secrets.influxUser+':'+secrets.influxPassword,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Content-Length': Buffer.byteLength(postData)
-        }
-      };
-      
-      const req = http.request(options, (res) => {
-        res.setEncoding('utf8');
+     http.get('http://www.google.com/index.html', (res) => {
+        console.log(`Got response: ${res.statusCode}`);
+        // consume response body
+        res.resume();
+      }).on('error', (e) => {
+        console.log(`Got error: ${e.message}`);
       });
-      
-      req.on('error', (e) => {
-        console.error(`problem with request to Influx: ${e.message}`);
-      });
-      console.log("sending to Influx: " + postData );
-      req.write(postData);
-      req.end();
    },
    
    setContext: function(ctx, req, res){
@@ -120,6 +98,11 @@ module.exports = function (ctx, req, res) {
   urlProcessor.setContext(ctx, req, res); 
   urlProcessor.processUrlKey(key);
   
+  /*
+  res.writeHead(404, { 'Content-Type': 'text/html '});
+  
+  res.end('URL Not found!');
+  */
 };
 
 
