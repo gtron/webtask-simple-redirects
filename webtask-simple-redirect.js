@@ -71,7 +71,7 @@ var urlProcessor = ( {
             return cb(error);
           }
           data = data || { counter: 1 };
-          dataK = data[k] || {};
+          dataK = data[k] ;
           
           urlProcessor.processData(dataK);
           
