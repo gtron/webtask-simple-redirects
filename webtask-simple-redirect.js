@@ -1,6 +1,9 @@
 const http = require('http');
 const querystring = require('querystring');
 
+const Influx = require('influx');
+
+
 var urlProcessor = ( {
    context:{}, req:{}, res:{},
    key: "", 
@@ -13,6 +16,7 @@ var urlProcessor = ( {
      this.checkData();
      this.incLocalCounter();
      this.saveData(this.key,this.urlData);
+     this.initInflux();
      this.sendToInflux();
      this.sendRedirect(302, this.urlData.url );
 
@@ -20,7 +24,17 @@ var urlProcessor = ( {
    
    sendToInflux : function() {
      var secrets = this.context.secrets;
-     
+    
+    console.log(this.influx);
+    
+    this.influx.writePoints([
+      {
+        measurement: 'response_times',
+        tags: { host: os.hostname() },
+        fields: { duration, path: this.req.path },
+      }
+    ]);
+    
       postData =  secrets.influxDb+','+querystring.stringify({
         "urlKey": this.key
         }, 
@@ -61,14 +75,17 @@ var urlProcessor = ( {
    
    processUrlKey : function ( k ) {
      this.key = k;
+     console.log('K:' + k);
      this.context.storage.get(function (error, data) {
           if (error) return cb(error);
+          console.log(data);
           data = data || { counter: 1 };
+          console.log( data, k , data[k]);
           if ( k in data ) {
             dataK = data[k] ;
             urlProcessor.processData(dataK);
           }  else {
-            urlProcessor.sendNotFound();
+            urlProcessor.sendNotFound('Url not found');
           }
     });
   },
@@ -85,7 +102,7 @@ var urlProcessor = ( {
     });
   },
   
-  sendNotFound: function (message = 'Not found') {
+  sendNotFound: function (message = 'Not found...') {
     this.res.writeHead(404, { 'Content-Type': 'text/html ' });
     this.res.end('Error! ' + message );
   },
@@ -106,6 +123,27 @@ var urlProcessor = ( {
    
    log : function (prefix = '---') {
      //console.log("urlProcessorLogger - " + prefix + " call:" + this.call++ , this.urlData );
+   },
+   
+   initInflux : function()  {
+     this.influx = new Influx.InfluxDB({
+     host: this.context.secrets.influxHost,
+     database: this.context.secrets.influxDb,
+     username: this.context.secrets.influxUser,
+     password: this.context.secrets.influxPassord,
+     schema: [
+       {
+         measurement: 'redirects-webtask',
+         fields: {
+           path: Influx.FieldType.STRING,
+           duration: Influx.FieldType.INTEGER
+         },
+         tags: [
+           'host'
+         ]
+       }
+     ]
+    });
    }
 }); 
 
@@ -113,6 +151,8 @@ module.exports = function (ctx, req, res) {
   
   let arr = req.url.split('/');
   let key = arr[arr.length - 1].split('?')[0];
+  
+  console.log(arr, key);
   
   urlProcessor.setContext(ctx, req, res); 
   urlProcessor.processUrlKey(key);
