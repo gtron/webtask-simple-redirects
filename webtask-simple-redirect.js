@@ -1,9 +1,6 @@
 const http = require('http');
 const querystring = require('querystring');
 
-/**
-* @param ctx {WebtaskContext}
-*/
 var urlProcessor = ( {
    context:{}, req:{}, res:{},
    key: "", 
@@ -14,10 +11,10 @@ var urlProcessor = ( {
      
      this.urlData = data;
      this.checkData();
-     this.incCounter();
+     this.incLocalCounter();
      this.saveData(this.key,this.urlData);
      this.sendToInflux();
-     this.endProcess(302, this.urlData.url );
+     this.sendRedirect(302, this.urlData.url );
 
    },
    
@@ -63,63 +60,52 @@ var urlProcessor = ( {
    }, 
    
    processUrlKey : function ( k ) {
-     
      this.key = k;
-     
      this.context.storage.get(function (error, data) {
-          if (error) {
-            return cb(error);
-          }
+          if (error) return cb(error);
           data = data || { counter: 1 };
-          
           if ( k in data ) {
             dataK = data[k] ;
-            
             urlProcessor.processData(dataK);
           }  else {
-            urlProcessor.sendError('Not found');
+            urlProcessor.sendNotFound();
           }
     });
   },
   
   saveData : function ( k, v ) {
-     
      storage = this.context.storage;
-     
      storage.get(function (error, data) {
-          if (error) {
-            return cb(error);
-          }
-          data[k] = v;
+          if (error) return cb(error);
           
+          data[k] = v;
           storage.set(data, function (error) {
               if (error) return cb(error);
-              // console.log("written new Data", data);
           });
     });
   },
   
-  sendError: function (message = 'Error!') {
+  sendNotFound: function (message = 'Not found') {
     this.res.writeHead(404, { 'Content-Type': 'text/html ' });
     this.res.end('Error! ' + message );
   },
   
-  endProcess : function (code = 404, destination = '') {
+  sendRedirect : function (code = 404, destination = '') {
     this.res.writeHead(code, { 'Content-Type': 'text/html ', 'Location' : destination });
-    this.res.end('This is the redirect!');
+    this.res.end('<a href="'+destination+'">Continue &raquo;</a>');
   },
    
    checkData : function() {
      if ( this.urlData === undefined )
-        throw( new Error('')); 
+        throw( new Error('No data')); 
    },
    
-   incCounter : function () {
+   incLocalCounter : function () {
      this.urlData.cnt ++;
    },
    
    log : function (prefix = '---') {
-     console.log("urlProcessorLogger - " + prefix + " call:" + this.call++ , this.urlData );
+     //console.log("urlProcessorLogger - " + prefix + " call:" + this.call++ , this.urlData );
    }
 }); 
 
