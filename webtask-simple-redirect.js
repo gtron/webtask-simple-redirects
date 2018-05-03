@@ -46,15 +46,12 @@ var urlProcessor = ( {
         res.on('data', (chunk) => {
           console.log(`BODY: ${chunk}`);
         });
-        res.on('end', () => {
-          console.log('No more data in response.');
-        });
       });
       
       req.on('error', (e) => {
         console.error(`problem with request to Influx: ${e.message}`);
       });
-      console.log("sending to Influx: " + postData );
+      //console.log("sending to Influx: " + postData );
       req.write(postData);
       req.end();
    },
