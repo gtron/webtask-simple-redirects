@@ -23,7 +23,10 @@ var urlProcessor = ( {
    sendToInflux : function() {
      var secrets = this.context.secrets;
      
-    var postData = secrets.influxDb + ',xxx' + " value=1";
+      postData = secrets.influxDb + ',' + querystring.stringify({
+        "urlKey": this.key
+        }, 
+        ',') + " value=1";
       
       const options = {
         hostname: secrets.influxHost,
